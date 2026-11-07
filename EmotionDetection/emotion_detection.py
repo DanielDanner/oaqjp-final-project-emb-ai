@@ -2,38 +2,45 @@ import requests
 import json
 
 def emotion_detector(text_to_analyze):
-    """
-    This function analyzes the input text using the Watson NLP Emotion Predict service
-    and returns a dictionary containing emotional scores and the dominant emotion.
-    """
     url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
-    header = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
-    input_json = { "raw_document": { "text": text_to_analyze } }
+    myobj = { "raw_document": { "text": text_to_analyze } }
+    header = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_standard"}
     
-    # Send POST request to the emotion prediction service
-    response = requests.post(url, json=input_json, headers=header)
+    # Manejo de entradas vacías
+    if not text_to_analyze or text_to_analyze.strip() == "":
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
+        }
+
+    response = requests.post(url, json = myobj, headers = header)
     
-    # Parse the response text into a Python dictionary
+    if response.status_code == 400:
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
+        }
+
     formatted_response = json.loads(response.text)
+    embedding = formatted_response['emotionPredictions'][0]['emotion']
     
-    # Extract emotion scores from the response dictionary
-    emotions = formatted_response['emotionPredictions'][0]['emotion']
-    anger_score = emotions['anger']
-    disgust_score = emotions['disgust']
-    fear_score = emotions['fear']
-    joy_score = emotions['joy']
-    sadness_score = emotions['sadness']
+    # Obtener emoción dominante
+    dominant_emotion = max(embedding, key=embedding.get)
     
-    # Determine the dominant emotion with the highest score
-    dominant_emotion = max(emotions, key=emotions.get)
-    
-    # Return the formatted dictionary with all scores and the dominant emotion
     return {
-        'anger': anger_score,
-        'disgust': disgust_score,
-        'fear': fear_score,
-        'joy': joy_score,
-        'sadness': sadness_score,
+        'anger': embedding['anger'],
+        'disgust': embedding['disgust'],
+        'fear': embedding['fear'],
+        'joy': embedding['joy'],
+        'sadness': embedding['sadness'],
         'dominant_emotion': dominant_emotion
     }
     
